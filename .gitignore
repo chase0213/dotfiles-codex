@@ -1,0 +1,19 @@
+# macOS and editors
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Codex credentials and local state (never commit)
+auth.json
+history.jsonl
+logs/
+sessions/
+cache/
+tmp/
+state/
+
+# Local overrides
+AGENTS.override.md
+*.local.config.toml
+
