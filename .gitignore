@@ -5,6 +5,7 @@
 *.swp
 
 # Codex credentials and local state (never commit)
+config.toml
 auth.json
 history.jsonl
 logs/
@@ -16,4 +17,3 @@ state/
 # Local overrides
 AGENTS.override.md
 *.local.config.toml
-

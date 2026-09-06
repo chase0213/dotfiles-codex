@@ -7,16 +7,17 @@ Codex のユーザー向けグローバル設定のうち、公開して安全�
 | パス | 配置先 | 内容 |
 | --- | --- | --- |
 | `AGENTS.md` | `~/.codex/AGENTS.md` | 全リポジトリ共通の作業・レビュー・Git 方針 |
-| `config.toml` | `~/.codex/config.toml` | Codex のユーザー設定。ここでは subagent の並列数だけを設定 |
+| `config.example.toml` | 初回のみ `~/.codex/config.toml` へコピー | 公開可能な初期設定。実際の設定は端末ローカルで管理 |
 | `agents/*.toml` | `~/.codex/agents/` | custom agent 定義 |
 | `skills/*/SKILL.md` | `~/.agents/skills/` | 再利用可能なワークフロー |
 | `install.sh` | 任意 | 競合を事前検査してからシンボリックリンクを作成 |
 | `scripts/verify.py` | 任意 | TOML、agent 制約、skill frontmatter の構造検証 |
+| `scripts/test_install.py` | 任意 | 一時ディレクトリでインストール・旧設定リンク移行を検証 |
 
 ## Claude 設定からの主な変更
 
 - `CLAUDE.md` を Codex が自動検出する `AGENTS.md` に変更。
-- `settings.json` は移植せず、Codex の `config.toml` に置換。
+- `settings.json` は移植せず、Codex の `config.example.toml` に置換。
 - `agents/*.md` の Claude 用 frontmatter を、Codex custom agent の standalone TOML に変換。
 - `commands/fix-github-issue.md` は custom slash command として持たず、明示・暗黙に呼び出せる `fix-github-issue` skill に変更。
 - `sonnet` / `opus` / `haiku` の固定指定、Claude 固有の `Agent`・`AskUserQuestion`・`Read/Grep/Glob/Bash` 設定を削除。
@@ -34,7 +35,9 @@ Codex のユーザー向けグローバル設定のうち、公開して安全�
 
 ## Setup
 
-このディレクトリを設定の source of truth とし、Codex が参照する場所へシンボリックリンクを張ります。リポジトリを移動するとリンクが切れるため、最初に永続的な場所へ配置してください。
+このディレクトリを共有設定の source of truth とし、`AGENTS.md`、custom agent、skill を Codex が参照する場所へシンボリックリンクで配置します。リポジトリを移動するとリンクが切れるため、最初に永続的な場所へ配置してください。
+
+`~/.codex/config.toml` だけはリンクしません。Codex がプロジェクトの trust、marketplace、plugin、UI 状態など端末固有情報を書き込むため、通常ファイルとしてローカル管理します。
 
 ```sh
 git clone <repository-url> ~/dotfiles-codex
@@ -49,13 +52,13 @@ cd ~/dotfiles-codex
 python3 scripts/verify.py
 ```
 
-続いて、このディレクトリから `~/.codex` と `~/.agents/skills` へリンクを作成します:
+続いて、このディレクトリから `~/.codex` と `~/.agents/skills` へリンクを作成します。`~/.codex/config.toml` が存在しない場合だけ、`config.example.toml` から通常ファイルを作成します。既存の通常ファイルは変更しません。旧版が作成した、このリポジトリの `config.toml` への読み取り可能なリンクは、内容を保持した通常ファイルへ移行します:
 
 ```sh
 ./install.sh
 ```
 
-既存の `~/.codex/AGENTS.md`、`~/.codex/config.toml`、同名 agent/skill がある場合、通常実行は競合を表示し、何も変更せず終了します。既存ファイルを退避してリンクへ置き換える場合だけ `--force` を指定してください。退避名には日時とプロセス ID が付きます:
+既存の `~/.codex/AGENTS.md` または同名 agent/skill がある場合、通常実行は競合を表示し、何も変更せず終了します。既存の管理対象を退避してリンクへ置き換える場合だけ `--force` を指定してください。退避名には日時とプロセス ID が付きます。`--force` でも既存の通常ファイルの `config.toml` は置き換えません。切れた設定リンクや他の場所を参照する設定リンクは、`--force` にかかわらず変更前に停止します:
 
 ```sh
 ./install.sh --force
@@ -65,20 +68,58 @@ python3 scripts/verify.py
 
 ```text
 ~/.codex/AGENTS.md       -> <repo>/AGENTS.md
-~/.codex/config.toml     -> <repo>/config.toml
 ~/.codex/agents/*.toml   -> <repo>/agents/*.toml
 ~/.agents/skills/<name>  -> <repo>/skills/<name>
+
+~/.codex/config.toml     通常ファイル（シンボリックリンクにしない）
 ```
+
+### Migrating legacy config links
+
+旧版は `~/.codex/config.toml -> <repo>/config.toml` を作成していました。新しい版ではリポジトリ内の実設定を削除するため、旧リンクを使っているPCは **更新前に設定のバックアップ** を取ってください。Codex を終了してから実行すると、移行中の設定書き込みとの競合を避けられます。
+
+```sh
+if [ -L "$HOME/.codex/config.toml" ] && [ -f "$HOME/.codex/config.toml" ]; then
+  config_backup="$HOME/.codex/config.toml.before-update.$(date '+%Y%m%d-%H%M%S').$$"
+  (umask 077; cat "$HOME/.codex/config.toml" > "$config_backup")
+fi
+
+git pull --ff-only
+python3 scripts/verify.py
+./install.sh
+```
+
+- 旧リンク先が読める場合: 内容を権限 `600` の一時ファイルへコピーしてから通常ファイルに置き換えます。元のリンクは日時付きで退避し、元のファイルは変更しません。再実行では移行済みの通常ファイルを保持します。
+- 旧リンク先が消えている場合: 設定を推測して初期化せず、何も変更する前にエラーで停止します。リンクを退避し、バックアップを `~/.codex/config.toml` の通常ファイルとして復元（権限 `600`）してから再実行してください。
+- 他の場所へのリンク、ディレクトリ等の場合: 自動移行しません。参照先と設定内容を確認し、通常ファイルとして用意してください。
+
+設定の復元が不要で、サンプルの初期値に戻してよいと判断した場合だけ、切れたリンクを退避して再実行できます。この操作では以前の設定は復元されません。
+
+```sh
+mv "$HOME/.codex/config.toml" "$HOME/.codex/config.toml.broken.$(date '+%Y%m%d-%H%M%S').$$"
+./install.sh
+```
+
+開発時の回帰テスト:
+
+```sh
+python3 scripts/test_install.py
+```
+
+テストは一時コピーの配置先参照だけをテスト用変数に置き換え、実際のホーム設定には触れません。
 
 ### 手動でリンクする
 
-`install.sh` を使わずに設定する場合は、このリポジトリのルートで次を実行します。以下のコマンドは既存ファイルを上書きしないため、同名ファイルがある場合は事前にバックアップまたは統合してください。
+以下は新規配置用です。旧設定リンクの移行には上記の手順または `install.sh` を使ってください。`install.sh` を使わずに設定する場合は、このリポジトリのルートで次を実行します。以下のコマンドは既存ファイルを上書きしないため、同名ファイルがある場合は事前にバックアップまたは統合してください。
 
 ```sh
 mkdir -p "$HOME/.codex/agents" "$HOME/.agents/skills"
 
 ln -s "$PWD/AGENTS.md" "$HOME/.codex/AGENTS.md"
-ln -s "$PWD/config.toml" "$HOME/.codex/config.toml"
+
+if [ ! -e "$HOME/.codex/config.toml" ] && [ ! -L "$HOME/.codex/config.toml" ]; then
+  install -m 600 "$PWD/config.example.toml" "$HOME/.codex/config.toml"
+fi
 
 for file in "$PWD"/agents/*.toml; do
   ln -s "$file" "$HOME/.codex/agents/$(basename "$file")"
@@ -93,17 +134,17 @@ done
 
 ```sh
 readlink "$HOME/.codex/AGENTS.md"
-readlink "$HOME/.codex/config.toml"
 find "$HOME/.codex/agents" "$HOME/.agents/skills" -type l -print
+test -f "$HOME/.codex/config.toml" && test ! -L "$HOME/.codex/config.toml"
 ```
 
-`config.toml` 全体をすでに個別管理している場合は、このリポジトリのファイルへ置き換える前に既存設定を統合してください。特に model、approval、sandbox、MCP、通知などのローカル設定は自動マージされません。
+`config.example.toml` は新しい端末用の初期値です。model、approval、sandbox、MCP、通知、プロジェクト trust、plugin 状態などは `~/.codex/config.toml` で端末ごとに管理し、このリポジトリにはコミットしません。
 
 Codex は skill の変更を通常は自動検出します。表示されない場合や `config.toml` を変更した場合は Codex を再起動してください。
 
 ## 管理しないもの
 
-資格情報 (`auth.json` や OS keychain)、会話履歴、ログ、キャッシュ、セッション状態、端末固有の override はコミットしません。MCP や connector の認証状態もこのリポジトリには含めません。
+実際の `config.toml`、資格情報 (`auth.json` や OS keychain)、会話履歴、ログ、キャッシュ、セッション状態、端末固有の override はコミットしません。MCP や connector の認証状態もこのリポジトリには含めません。
 
 ## 追加候補
 

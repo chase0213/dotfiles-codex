@@ -24,16 +24,16 @@ def require_non_empty_string(data: dict, key: str, path: Path) -> str:
     return value.strip()
 
 
-with (ROOT / "config.toml").open("rb") as stream:
+with (ROOT / "config.example.toml").open("rb") as stream:
     config = tomllib.load(stream)
 
 agents_config = config.get("agents")
 if not isinstance(agents_config, dict):
-    fail("config.toml: missing [agents] table")
+    fail("config.example.toml: missing [agents] table")
 for key in ("max_threads", "max_depth"):
     value = agents_config.get(key)
     if not isinstance(value, int) or isinstance(value, bool) or value < 1:
-        fail(f"config.toml: agents.{key} must be a positive integer")
+        fail(f"config.example.toml: agents.{key} must be a positive integer")
 
 agent_names: set[str] = set()
 agent_paths = sorted((ROOT / "agents").glob("*.toml"))
@@ -88,4 +88,3 @@ print(
     "Codex configuration is structurally valid "
     f"({len(agent_names)} agents, {len(skill_names)} skills)."
 )
-
