@@ -1,34 +1,24 @@
 ---
 name: feature-dev
-description: Design, decompose, implement, and verify a large or unclear feature. Use for multi-file feature additions and work that needs explicit acceptance criteria; do not use for small, well-scoped edits.
+description: Design and implement large or unclear features with explicit acceptance criteria and integration checks. Skip small, well-scoped edits.
 ---
 
 # Feature development
 
-## 1. Explore and design
+## Design
 
-- Inspect the affected code and current project instructions before proposing a design.
-- Delegate bounded, read-heavy exploration only when parallel work materially helps.
-- Resolve requirements that would materially change the implementation with the user.
-- Record the design in `docs/plans/<feature>.md` when the repository keeps design artifacts. Include target interfaces, affected files, out-of-scope items, risks, and end-to-end verification.
+- Inspect affected code and project conventions. Define the intended behavior, interfaces, scope, constraints, and executable acceptance checks.
+- Resolve consequential requirements not settled by the request. Continue on authorized design decisions and routine implementation choices without an extra approval gate.
+- Keep the plan in conversation unless the project uses design artifacts or persistence helps a long task; then use its established location, such as `docs/plans/<feature>.md`.
 
-## 2. Decompose
+## Implement
 
-- Split the design into independently verifiable subtasks.
-- Give each subtask a definition of done, executable acceptance checks, dependencies, and explicit exclusions.
-- Obtain user confirmation when the design represents a meaningful product or architecture choice.
+- Split work only where independent acceptance checks or dependencies make the split useful. State the expected outcome and exclusions for each part.
+- Work locally or delegate bounded independent parts when it helps. Give delegated work sufficient context, file ownership, dependencies, and acceptance checks; avoid overlapping writes.
+- Choose verification against the specification, not the implementation. Prefer regression tests for bugs and tests first when the behavior is stable; include relevant failure and boundary cases.
+- Use the current model and execution mode unless the task actually requires a change. This workflow does not require model switching, subagents, worktrees, or Git mutations.
 
-## 3. Implement
+## Integrate
 
-- Use the `implementer` custom agent for bounded subtasks when delegation was explicitly requested or materially improves independent parallel work.
-- Give every delegated task complete context; subagents should not need the parent conversation to infer scope.
-- Prefer tests first, covering normal, abnormal, and boundary behavior.
-- Avoid parallel edits to overlapping files. Use isolated worktrees only when the repository workflow supports them.
-
-## 4. Integrate and verify
-
-- Check behavior at subtask boundaries and run the focused and full relevant test suites.
-- Execute the end-to-end verification from the design.
-- Review the final diff against the design and fix correctness or requirement gaps without unrelated cleanup.
-- Report verification commands and concise results.
-
+- Verify boundaries between parts and the end-to-end acceptance criteria. Run focused checks and the project's required checks; expand coverage when the change or remaining risk warrants it.
+- Review the final diff against the intended behavior. Resolve scope-relevant findings and report verification evidence and unproven requirements.

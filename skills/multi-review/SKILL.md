@@ -1,41 +1,36 @@
 ---
 name: multi-review
-description: Run a multi-perspective review of a non-trivial diff with parallel custom agents, then deduplicate and prioritize findings. Use after substantial changes or before a PR; skip trivial edits.
+description: Review a diff from relevant independent perspectives and reconcile findings. Use for a requested comprehensive review or a change whose breadth or risk benefits from multiple reviewers; skip routine edits.
 ---
 
 # Multi-perspective review
 
-## Scope
+## Establish the actual scope
 
-Determine the requested diff. Default to the current branch against its clear base branch; if no base is available, ask for the intended range. Stop when there is no diff.
+- Honor the user's path, PR, or revision range. Otherwise inspect working-tree status and use the current task's changes, including staged, unstaged, and relevant untracked files. For a clean tree, use the branch's known base when the context calls for branch review.
+- State the comparison before reviewing. For pending changes, `git diff HEAD -- <paths>` includes staged and unstaged tracked changes; inspect relevant untracked files separately. For branch work, use the established merge base and include pending changes if they belong to the task.
+- Do not invent a base or fall back to the last commit. Ask only when the intended scope remains ambiguous. If the confirmed scope has no changes, report that and finish.
 
-## Agent selection
+## Select relevant perspectives
 
-Always run these custom agents:
+Choose based on changed behavior and plausible impact; paths are clues, not the sole gate. There is no mandatory reviewer count.
 
-- `security-reviewer`
-- `performance-reviewer`
-- `domain-reviewer`
-- `maintainability-reviewer`
+| Perspective | Use when |
+| --- | --- |
+| security-reviewer | Trust boundaries, authentication, authorization, secrets, or untrusted input change |
+| performance-reviewer | Hot paths, I/O, queries, resource growth, or rendering costs change |
+| domain-reviewer | Business rules, invariants, terminology, or architectural boundaries change |
+| maintainability-reviewer | Responsibilities, dependencies, or complexity change materially |
+| dependency-reviewer | Manifests, lockfiles, or container base images change |
+| migration-reviewer | Database schemas, data migrations, or deployment order change |
+| a11y-reviewer | User interfaces or accessibility behavior change |
+| api-contract-reviewer | Public API behavior, schemas, RPCs, or exported contracts change |
 
-Add optional agents only when changed paths or content match:
+- Use relevant independent reviewers in parallel when available and useful. Give each the exact comparison, task context, and access to the diff and needed surrounding code. Keep review read-only and wait for selected reviewers before synthesis.
+- If custom agents or delegation are unavailable, review the relevant perspectives locally and disclose the limitation. Do not block the task on a particular agent name or tool-call layout.
 
-- `dependency-reviewer`: manifests, lockfiles, or container base images.
-- `migration-reviewer`: database migrations or schema changes.
-- `a11y-reviewer`: UI components, templates, or accessibility-relevant styles.
-- `api-contract-reviewer`: public routes, API schemas, RPC definitions, SDKs, or exported library contracts.
+## Reconcile and report
 
-## Execution
-
-- Spawn all selected reviewers in one parallel batch.
-- Give each reviewer the exact diff range, relevant user context, and a request for its standard concise result.
-- Reviewers are read-only. Wait for all selected agents before synthesis.
-
-## Synthesis
-
-- Deduplicate findings that identify the same underlying issue and location; mention reviewer agreement.
-- Preserve the reviewers' severities and sort critical, high, medium, then low.
-- Lead with actionable findings. If there are critical or high findings, keep lower-severity details compact.
-- Include a per-reviewer PASS, FAIL, or SKIPPED status and finding count.
-- End with one or two concrete next actions, or state that the diff is ready.
-
+- Check each finding against the code and requirements. Merge the same underlying issue, resolve conflicting claims, and correct unsupported severity labels with evidence.
+- Lead with actionable findings, ordered by impact, with file locations, consequences, and a focused fix. Keep valid lower-impact findings concise rather than suppressing them solely because a serious issue exists.
+- Summarize the scope reviewed and material coverage gaps. If none were found, say so without implying unreviewed areas passed. A full PASS/SKIPPED roster or fixed report template is not required.
