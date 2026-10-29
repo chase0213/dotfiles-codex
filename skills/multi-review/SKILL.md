@@ -32,5 +32,6 @@ Choose based on changed behavior and plausible impact; paths are clues, not the 
 ## Reconcile and report
 
 - Check each finding against the code and requirements. Merge the same underlying issue, resolve conflicting claims, and correct unsupported severity labels with evidence.
+- Treat an implementation narrative or decision trail as context to verify, not proof. Check material claims against available diffs, code, commands, and results; distinguish a technical defect from a rationale that needs human judgment, and call out retrospective explanations presented as recorded history.
 - Lead with actionable findings, ordered by impact, with file locations, consequences, and a focused fix. Keep valid lower-impact findings concise rather than suppressing them solely because a serious issue exists.
 - Summarize the scope reviewed and material coverage gaps. If none were found, say so without implying unreviewed areas passed. A full PASS/SKIPPED roster or fixed report template is not required.
